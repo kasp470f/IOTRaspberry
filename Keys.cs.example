@@ -1,0 +1,6 @@
+namespace project
+{
+    public static class Keys {
+        public static string connectionString = "";
+    }
+}
