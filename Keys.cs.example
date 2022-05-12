@@ -1,5 +1,0 @@
-namespace webapp.Data {
-    public static class Keys {
-        public static string ConnectionString = "";
-    }
-}
