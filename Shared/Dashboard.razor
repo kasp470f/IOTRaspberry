@@ -26,10 +26,10 @@
     <div class="lower-dashboard">
         <div>
             <p>Head (m)</p>
-            <p>@response.PowerUsage</p>
+            <p>@response.PumpHead</p>
         </div>
         <div>
-            <p>Flow (m<sup>2</sup>/h)</p>
+            <p>Flow (m<sup>3</sup>/h)</p>
             <p>@response.PumpFlow</p>
         </div>
         <div>Controlled from: Grundfos GO Remote</div>
@@ -59,25 +59,30 @@
     private ResponseData response = new ResponseData();
 
     private static DeviceClient deviceClient;
-    private static readonly string connectionString = "HostName=DotNETCoreIOT.azure-devices.net;DeviceId=Blazor;SharedAccessKey=UTcYsXb4sDzYf/iraDsxusZ2zocbQP5oEi3SxH4SAss=";
+    private static readonly string connectionString = Keys.ConnectionString;
 
     protected override void OnInitialized() {
         deviceClient = DeviceClient.CreateFromConnectionString(connectionString);
-        deviceClient.SetReceiveMessageHandlerAsync(ReceiveCloudToDeviceMessageAsync, deviceClient);
+        ReceiveMessagesAsync();
     }
 
-    private async Task ReceiveCloudToDeviceMessageAsync(Message msg, object _) {
-        string res = Encoding.ASCII.GetString(msg.GetBytes());
+    private async void ReceiveMessagesAsync() {
+        while(true) {
+            Message msg = await deviceClient.ReceiveAsync();
+            if(msg == null) {
+                continue;
+            }
 
-        if(prevResponse != res) {
-            response = JsonConvert.DeserializeObject<ResponseData>(res);
-            prevResponse = res;
+            string res = Encoding.ASCII.GetString(msg.GetBytes());
+            if(res != prevResponse) {
+                response = JsonConvert.DeserializeObject<ResponseData>(res);
+                prevResponse = res;
 
-            Console.WriteLine(res);
+                Console.WriteLine("State has changed.");
+                await InvokeAsync(() => StateHasChanged());
+            }
 
-            InvokeAsync(() => StateHasChanged());
+            await deviceClient.CompleteAsync(msg.LockToken);
         }
-
-        await deviceClient.CompleteAsync(res);
     }
 }
